@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        form {
+            width: 270px;
+        }
+
+        input {
+            width: 64%;
+            background: #eee;
+        }
+
+        input:focus {
+            background: #fff;
+        }
+
+        form {
+            padding: 0 12px 12px;
+        }
+
+        label {
+            display: block;
+            padding-bottom: 12px;
+        }
+
+        .label-text {
+            width: 36%;
+            float: left;
+        }
+
+        #img-show {
+            width: 135px;
+            height: 135px;
+            display: block;
+            margin: 0 auto;
+            object-fit: cover;
+        }
+    </style>
+    <script>
+        function imgfileChange() {
+            var img_show = document.getElementById("img-show");
+            var imgfile = document.getElementById("imgfile");
+
+            var freader = new FileReader();
+            freader.readAsDataURL(imgfile.files[0]);
+            freader.onload = function (e) {
+                img_show.src = e.target.result;
+            };
+        }
+    </script>
+</head>
+<body>
+<div id="app">
+    <div id="wrap">
+        <div id="header">
+		          <span style="margin-right: 10px;">
+		             <script type="text/javascript">
+		               var date = new Date();
+                       document.write("今天是：" + date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + date.getDate() + "日" + " 星期" + "日一二三四五六".charAt(date.getDay()));
+		             </script>
+		        </span>
+            <h1>旅游信息管理系统</h1>
+        </div>
+        <div id="header-bar"></div>
+        <div id="content" style="height: 480px">
+            <img src="../img/timg.jpg" style="float: right;height: 320px">
+            <h2>修改景点</h2>
+            <form action="viewspotlist.html" method="post">
+                <label>
+                    <div class="label-text">景&emsp;&emsp;点：</div>
+                    <input type="text" v-model="place.name">
+                </label>
+                <label>
+                    <div class="label-text">印象图片：</div>
+                    <div style="text-align: center;padding-left: 36%">
+                        <img :src="'data:image/png;base64,'+place.picPath" id="img-show">
+                        <input type="file" id="imgfile" ref="myFile" style="display: none" onchange="imgfileChange()">
+                    </div>
+                </label>
+                <label>
+                    <div class="label-text">旺季时间：</div>
+                    <input type="date" v-model="place.hotTime">
+                </label>
+                <label>
+                    <div class="label-text">旺季门票：</div>
+                    <input type="text" v-model="place.hotTicket">
+                </label>
+                <label>
+                    <div class="label-text">淡季门票：</div>
+                    <input type="text" v-model="place.dimTicket">
+                </label>
+                <label>
+                    <div class="label-text">景点描述：</div>
+                    <input type="text" v-model="place.describes">
+                </label>
+                <label>
+                    <div class="label-text">所属省份：</div>
+                    <select v-model="place.provinceId">
+                        <option :value="province.id" v-for="province in provinces" v-text="province.name"></option>
+                    </select>
+                </label>
+                <button type="button" @click="updatePlace">提 交</button>&emsp;
+                <a :href="'viewspotlist.html?provinceid='+place.provinceid">返回</a>
+            </form>
+        </div>
+        <div id="footer">
+            ABC@126.com
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script src="../js/vue.js"></script>
+<script src="../js/axios.min.js"></script>
+<script>
+    const app = new Vue({
+        el: "#app",
+        data: {
+            provinces: [],
+            place: {},
+            id: "",
+            onlProvinceId: ""
+        },
+        methods: {
+            findOne(id) {
+                _this = this;
+                axios.get("http://localhost:8080/place/findOne?id=" + id).then((res) => {
+                    _this.place = res.data;
+                    _this.onlProvinceId = res.data.provinceId;
+                });
+            },
+            findProvince() {
+                _this = this;
+                axios.get("http://localhost:8080/province/allProvince?page=" + 1 + "&size=" + 200).then((res) => {
+                    _this.provinces = res.data.province;
+                });
+            },
+            updatePlace() {
+                //修改景点的方法
+                let myFile = this.$refs.myFile;
+                let files = myFile.files;
+                let file = files[0];
+                let formdata = new FormData();
+                if (file === undefined) {
+                    formdata.append("picPath", this.place.picPath);
+                } else {
+                    formdata.append("pic", file);
+                }
+                formdata.append("id", this.place.id);
+                formdata.append("name", this.place.name);
+                formdata.append("hotTime", this.place.hotTime);
+                formdata.append("hotTicket", this.place.hotTicket);
+                formdata.append("dimTicket", this.place.dimTicket);
+                formdata.append("describes", this.place.describes);
+                formdata.append("provinceId", this.place.provinceId);
+                //旧的省份id
+                formdata.append("onlProvinceId", this.onlProvinceId);
+                axios({
+                    method: 'post',
+                    url: 'http://localhost:8080/place/update',
+                    data: formdata,
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                }).then((res) => {
+                    console.log(res.data);
+                    if (res.data.status) {
+                        alert(res.data.msg + ",点击确定回到景点列表");
+                        location.href = './viewspotlist.html?id=' + this.place.provinceid
+                    } else {
+                        alert(res.data.msg);
+                    }
+                })
+            }
+
+        },
+        created() {
+            this.findProvince();
+            let id = location.href.substring(location.href.indexOf("=") + 1);
+            this.id = id
+            this.findOne(this.id);
+            console.log(this.id)
+        }
+    })
+</script>

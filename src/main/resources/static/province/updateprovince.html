@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        form{
+            width:270px;
+        }
+        input{
+            width: 70%;
+            background: #eee;
+        }
+        input:focus{
+            background: #fff;
+        }
+        form{
+            padding: 0 12px 12px;
+        }
+        label{
+            display: block;
+            padding-bottom:12px;
+        }
+        .label-text{
+            width: 30%;
+            float: left;
+        }
+    </style>
+</head>
+<body>
+   <div id="app">
+	    <div id="wrap">
+	       <div id="header">
+	           <span style="margin-right: 10px;">
+				     <script type="text/javascript">
+				       var date = new Date();
+				       document.write("今天是：" + date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + date.getDate() + "日" + " 星期" + "日一二三四五六".charAt(date.getDay()));
+				     </script>
+				</span>
+	           <h1>旅游信息管理系统</h1>
+	       </div>
+	       <div id="header-bar"></div>
+	       <div id="content" style="height: 360px">
+	           <img src="../img/timg.jpg" style="float: right;height: 320px">
+	           <h2>修改省份</h2>
+	           <form action="provincelist.html" method="post">
+	               <label>
+	                   <div class="label-text">省&emsp;份：</div>
+	                   <input type="text" v-model="province.name" name="pname" >
+	               </label>
+	               <label>
+	                   <div class="label-text">标&emsp;签：</div>
+	                   <input type="text" v-model="province.tags" name="ptag">
+	               </label>
+	               <button type="button" @click="updateProvinceInfo">提 交</button>&emsp;
+	               <a href="provincelist.html">返回</a>
+	           </form>
+	       </div>
+	       <div id="footer">
+	           ABC@126.com
+	       </div>
+	   </div>
+   </div>
+</body>
+</html>
+<script src="../js/vue.js"></script>
+<script src="../js/axios.min.js"></script>
+<script>
+    const app = new Vue({
+        el:"#app",
+        data:{
+            province:{},
+			id:"",
+			admin:{}
+        },
+        methods:{
+			findOneProvince(){
+				 _this = this;
+				 axios.get("http://localhost:8080/province/findOneProvince?id="+this.id).then((res)=>{
+					_this.province = res.data;
+				    
+				});
+			},
+			updateProvinceInfo(){
+				_this = this;
+				axios.post("http://localhost:8080/province/update",this.province).then((res) => {
+					if(res.data.status){
+						alert(res.data.msg+",点击确定返回列表");
+						location.href='provincelist.html'
+					}else{
+						alert(res.data.msg);
+					}
+				});
+			}
+        
+        },
+        created() {
+			let id = location.href.substring(location.href.indexOf("=") + 1);
+			this.id = id;
+			this.findOneProvince();
+			this.admin = JSON.parse(window.localStorage.getItem("access-admin"));
+			if (!this.admin) {
+				window.location = '../login.html';
+			} else {
+				//检验token合法性
+				axios.get('http://localhost:8080/user/checkToken?token=' + this.admin.token).then((res) => {
+					if (res.data.status) {
+						//展示数据
+						this.findOneProvince();
+					} else {
+						//提示信息并返回登录页面
+						alert(res.data.msg);
+						location.href = '../login.html'
+					}
+				})
+			}
+		}
+    })
+</script>
